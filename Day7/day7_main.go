@@ -42,7 +42,7 @@ func readPrompt(filePath string) int {
 					args = append(args, line)
 				}
 				h.Ls(args)
-				h.Print()
+				//h.Print()
 			case "cd":
 				h.Cd(cmdLine[2])
 				ok = fscanner.Scan()
@@ -53,7 +53,10 @@ func readPrompt(filePath string) int {
 	}
 	fmt.Println(h)
 	//compute solution
-	res := h.ComputeSumFolderSizeWithSizeBellow(100000)
+	h.Capacity = 70000000
+	h.SpaceNeeded = 30000000
+
+	res := h.FindFolderToDelete()
 	//res := 0
 	return res
 }

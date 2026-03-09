@@ -38,23 +38,49 @@ func (f *File) Print() {
 type Folder struct {
 	name    string
 	parent  *Folder
+	weight  int
 	content []IHirarchyElem
 }
 
-func (f Folder) getWeight(hierarchy *Hierarchy) int {
-	weight := 0
+func (f *Folder) getWeight(hierarchy *Hierarchy) int {
+	totalWeight := 0
+	if f.weight > 0 {
+		return f.weight
+	}
 	for _, h := range f.content {
 		var ih IHirarchyElem
-		ih = &f
+		ih = f
 		if h == ih {
 			break
 		}
-		weight += h.getWeight(hierarchy)
+		weight := h.getWeight(hierarchy)
+		totalWeight += weight
 	}
-	if weight <= hierarchy.cap {
-		hierarchy.sum += weight
+
+	// ex1
+	if totalWeight <= hierarchy.cap {
+		hierarchy.sum += totalWeight
 	}
-	return weight
+	f.weight = totalWeight
+
+	return totalWeight
+}
+
+func (f *Folder) makeCandidateList(hie *Hierarchy, minW int) {
+	if f.getWeight(hie) >= minW {
+		hie.candidates = append(hie.candidates, f.weight)
+	}
+	for _, h := range f.content {
+		var ih IHirarchyElem
+		ih = f
+		if h == ih {
+			break
+		}
+		switch v := h.(type) {
+		case *Folder:
+			v.makeCandidateList(hie, minW)
+		}
+	}
 }
 
 func (f *Folder) Print() {
@@ -93,13 +119,37 @@ func (f *Folder) Find(s string) IHirarchyElem {
 type Hierarchy struct {
 	root    *Folder
 	current *Folder
-	// To find solution
+	// To find solution ex1
 	cap int
 	sum int
+
+	// To find solution ex2
+	Capacity    int
+	SpaceNeeded int
+	candidates  []int
 }
 
 func (h Hierarchy) Print() {
 	h.root.Print()
+}
+
+func (h *Hierarchy) FindFolderToDelete() int {
+	sum := h.root.getWeight(h)
+
+	needToDelete := h.SpaceNeeded - (h.Capacity - sum)
+	h.root.makeCandidateList(h, needToDelete)
+
+	// search in list
+	fmt.Printf("\nThe total size of the sys is %vo, we need to delete %vo\n", sum, needToDelete)
+	minS := h.candidates[0]
+	for _, size := range h.candidates {
+		opres := size - needToDelete
+		fmt.Printf("Prev candidate : %vo(%v), New candidate : %vo(%v)\n", minS, minS-needToDelete, size, size-needToDelete)
+		if minS-needToDelete < 0 || (opres >= 0 && opres < minS-needToDelete) {
+			minS = size
+		}
+	}
+	return minS
 }
 
 func (h *Hierarchy) GetCurrentName() string {
@@ -109,7 +159,7 @@ func (h *Hierarchy) GetCurrentName() string {
 func (h *Hierarchy) mkdir(name string) *Folder {
 	//var ih IHirarchyElem
 	//fmt.Printf("creating %s with parent %s\n", name, h.current.name)
-	f := Folder{name: name, parent: h.current, content: []IHirarchyElem{}}
+	f := Folder{name: name, parent: h.current, weight: -1, content: []IHirarchyElem{}}
 	//ih = f
 	//h.Print()
 	h.current.content = append(h.current.content, &f)
